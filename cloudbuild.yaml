@@ -57,7 +57,7 @@ options:
 
 # Substitutions (can be overridden at trigger time)
 substitutions:
-  _SERVICE_NAME: 'flood-dashboard'
+  _SERVICE_NAME: 'bemonc6'
   _REGION: 'asia-southeast1'
   _MEMORY: '512Mi'
   _CPU: '1'
