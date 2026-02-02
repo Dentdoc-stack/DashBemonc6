@@ -9,8 +9,8 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:latest'
       - '-f'
-      - 'Flood/Dockerfile'
-      - 'Flood/'
+      - 'Dockerfile'
+      - '.'
     dir: '.'
 
   # Step 2: Push the image to Container Registry
@@ -71,5 +71,5 @@ images:
 tags:
   - 'gcp-cloud-build-deploy-cloud-run'
   - 'gcp-cloud-build-deploy-cloud-run-managed'
-  - 'dashboard'
+  - 'bemonc6'
   - '${_SERVICE_NAME}'
