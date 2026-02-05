@@ -1,15 +1,16 @@
 /**
  * API Route: GET /api/compliance
- * Returns package-level compliance data for all flood packages
+ * Returns package-level compliance data and IPC data for all flood packages
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { dataCache } from '@/lib/backend/cache';
-import type { PackageComplianceMap, ComplianceStatus } from '@/types';
+import type { PackageComplianceMap, ComplianceStatus, IPCData } from '@/types';
 
 interface ComplianceResponse {
     success: boolean;
     packageCompliance: PackageComplianceMap;
+    ipcData: IPCData;
     summary: {
         compliant: number;
         nonCompliant: number;
@@ -48,6 +49,7 @@ export default async function handler(
         return res.status(200).json({
             success: true,
             packageCompliance,
+            ipcData: data.ipcData,
             summary,
             lastRefresh: data.lastRefresh,
         });

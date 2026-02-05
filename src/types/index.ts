@@ -163,3 +163,14 @@ export interface PackageCompliance {
 
 // Map of package_id -> compliance
 export type PackageComplianceMap = Record<string, PackageCompliance>;
+// IPC (Interim Payment Certificate) types
+export type IPCStatus = 'not submitted' | 'submitted' | 'in process' | 'released';
+
+export interface IPCRecord {
+  ipcNumber: string; // IPC 1, IPC 2, etc.
+  status: IPCStatus | null;
+}
+
+export interface IPCData {
+  records: IPCRecord[];
+}

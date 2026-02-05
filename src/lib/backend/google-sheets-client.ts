@@ -2,8 +2,8 @@
  * Google Sheets Client - Fetches published XLSX files directly
  */
 
-import { SHEET_SOURCES } from './config';
-import type { PackageCompliance, ComplianceStatus, Task } from '@/types';
+import { SHEET_SOURCES, CONFIG } from './config';
+import type { PackageCompliance, ComplianceStatus, Task, IPCData, IPCRecord, IPCStatus } from '@/types';
 import { parseDMY } from '../dataParser';
 
 interface RawComplianceData {
@@ -77,6 +77,96 @@ function parseComplianceData(raw: RawComplianceData | null): PackageCompliance {
         status,
         issues,
     };
+}
+
+/**
+ * Parse IPC data from row 2, columns Y-AD (24-29)
+ */
+function parseIPCData(sheet: any, XLSX: any): IPCData {
+    const records: IPCRecord[] = [];
+    
+    // Columns Y-AD are 0-indexed: 24-29
+    // Row 2 is the data row (index 1)
+    const ipcLabels = ['IPC 1', 'IPC 2', 'IPC 3', 'IPC 4', 'IPC 5', 'IPC 6'];
+    
+    console.log('[IPCData] Starting to parse IPC data...');
+    console.log('[IPCData] Sheet !ref:', sheet['!ref']);
+    console.log('[IPCData] All sheet keys:', Object.keys(sheet).filter(k => !k.startsWith('!')));
+    
+    // Log all cells in columns Y-Z and rows 1-2 to understand structure
+    for (let row = 0; row <= 5; row++) {
+        for (let col = 24; col <= 29; col++) {
+            const cell = XLSX.utils.encode_cell({ r: row, c: col });
+            const cellValue = sheet[cell];
+            if (cellValue) {
+                console.log(`[IPCData] Cell ${cell} (row ${row+1}, col Y-AD): "${cellValue.v}"`);
+            }
+        }
+    }
+    
+    for (let col = 24; col <= 29; col++) {
+        const statusCell = XLSX.utils.encode_cell({ r: 1, c: col }); // Row 2 (index 1)
+        const cellValue = sheet[statusCell];
+        const statusRaw = cellValue?.v ? String(cellValue.v).toLowerCase().trim() : null;
+        
+        console.log(`[IPCData] Reading Row 2, Column ${col} (${statusCell}): value="${cellValue?.v}", parsed="${statusRaw}"`);
+        
+        const statusMap: Record<string, IPCStatus> = {
+            'not submitted': 'not submitted',
+            'submitted': 'submitted',
+            'in process': 'in process',
+            'released': 'released',
+        };
+
+        const status: IPCStatus | null = statusRaw && statusMap[statusRaw] ? statusMap[statusRaw] : null;
+        
+        records.push({
+            ipcNumber: ipcLabels[col - 24],
+            status,
+        });
+    }
+    
+    console.log('[IPCData] Final parsed records:', records);
+    console.log('[IPCData] Non-null records:', records.filter(r => r.status !== null).length);
+    return { records };
+}
+
+/**
+ * Extract IPC data from published XLSX files
+ * Reads row 2 (columns Y-AD) for IPC validation data
+ */
+export async function fetchAllIPCData(): Promise<IPCData> {
+    console.log('Extracting IPC data from published XLSX files...');
+
+    try {
+        const XLSX = await import('xlsx');
+        const source = SHEET_SOURCES[0];
+        
+        if (!source) {
+            console.warn('No sheet sources configured');
+            return { records: [] };
+        }
+
+        const response = await fetch(source.publishedXlsxUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch XLSX: ${response.statusText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheet = workbook.Sheets[CONFIG.tabName];
+
+        if (!sheet) {
+            throw new Error(`Sheet "${CONFIG.tabName}" not found`);
+        }
+
+        const ipcData = parseIPCData(sheet, XLSX);
+        console.log(`✅ Extracted ${ipcData.records.length} IPC records`);
+        return ipcData;
+    } catch (error) {
+        console.error('Error fetching IPC data:', error);
+        return { records: [] };
+    }
 }
 
 /**
