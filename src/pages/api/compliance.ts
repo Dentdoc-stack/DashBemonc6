@@ -5,7 +5,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { dataCache } from '@/lib/backend/cache';
-import type { PackageComplianceMap, ComplianceStatus, IPCData } from '@/types';
+import type { PackageComplianceMap, IPCData } from '@/types';
 
 interface ComplianceResponse {
     success: boolean;

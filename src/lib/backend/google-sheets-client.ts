@@ -16,6 +16,17 @@ interface SheetRow {
     [key: string]: string | number | null | undefined;
 }
 
+interface SheetCell {
+    v?: string | number | boolean | null;
+    t?: string;
+    [key: string]: unknown;
+}
+
+// Represents an XLSX Worksheet with cells and metadata
+interface WorkSheet {
+    [cellKey: string]: SheetCell | undefined;
+}
+
 /**
  * Parse raw compliance data into PackageCompliance with status logic
  */
@@ -82,7 +93,7 @@ function parseComplianceData(raw: RawComplianceData | null): PackageCompliance {
 /**
  * Parse IPC data from row 2, columns Y-AD (24-29)
  */
-function parseIPCData(sheet: any, XLSX: any): IPCData {
+function parseIPCData(sheet: WorkSheet & Record<string, unknown>, XLSX: { utils: { encode_cell: (ref: { r: number; c: number }) => string } }): IPCData {
     const records: IPCRecord[] = [];
     
     // Columns Y-AD are 0-indexed: 24-29
@@ -97,8 +108,8 @@ function parseIPCData(sheet: any, XLSX: any): IPCData {
     for (let row = 0; row <= 5; row++) {
         for (let col = 24; col <= 29; col++) {
             const cell = XLSX.utils.encode_cell({ r: row, c: col });
-            const cellValue = sheet[cell];
-            if (cellValue) {
+            const cellValue = sheet[cell] as SheetCell | string | undefined;
+            if (cellValue && typeof cellValue === 'object' && 'v' in cellValue) {
                 console.log(`[IPCData] Cell ${cell} (row ${row+1}, col Y-AD): "${cellValue.v}"`);
             }
         }
@@ -106,10 +117,12 @@ function parseIPCData(sheet: any, XLSX: any): IPCData {
     
     for (let col = 24; col <= 29; col++) {
         const statusCell = XLSX.utils.encode_cell({ r: 1, c: col }); // Row 2 (index 1)
-        const cellValue = sheet[statusCell];
-        const statusRaw = cellValue?.v ? String(cellValue.v).toLowerCase().trim() : null;
+        const cellValue = sheet[statusCell] as SheetCell | string | undefined;
+        const statusRaw = cellValue && typeof cellValue === 'object' && 'v' in cellValue && cellValue.v 
+            ? String(cellValue.v).toLowerCase().trim() 
+            : null;
         
-        console.log(`[IPCData] Reading Row 2, Column ${col} (${statusCell}): value="${cellValue?.v}", parsed="${statusRaw}"`);
+        console.log(`[IPCData] Reading Row 2, Column ${col} (${statusCell}): value="${cellValue && typeof cellValue === 'object' && 'v' in cellValue ? cellValue.v : null}", parsed="${statusRaw}"`);
         
         const statusMap: Record<string, IPCStatus> = {
             'not submitted': 'not submitted',
